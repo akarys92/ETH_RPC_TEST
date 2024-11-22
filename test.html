@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum RPC Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+            background-color: #f9f9f9;
+        }
+        input, button {
+            padding: 0.5em;
+            margin: 0.5em 0;
+            width: 100%;
+            max-width: 400px;
+        }
+        table {
+            width: 100%;
+            max-width: 800px;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 0.5em;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ethereum RPC Endpoint Tester</h1>
+    <p>Enter an Ethereum RPC endpoint to test its functionality across a range of methods.</p>
+    <input type="text" id="rpcEndpoint" placeholder="Enter RPC Endpoint" />
+    <button onclick="testRpc()">Test Endpoint</button>
+    <table id="resultsTable" style="display: none;">
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Enabled</th>
+                <th>Response</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const methodsToTest = [
+            // Read Methods
+            { method: "eth_chainId", params: [] },
+            { method: "eth_blockNumber", params: [] },
+            { method: "eth_gasPrice", params: [] },
+            { method: "eth_getBlockByNumber", params: ["latest", false] },
+            { method: "eth_getBalance", params: ["0x0000000000000000000000000000000000000000", "latest"] },
+            { method: "eth_call", params: [{ to: "0x0000000000000000000000000000000000000000" }, "latest"] },
+            // Write Methods
+            { method: "eth_sendRawTransaction", params: ["0xf86d808504a817c8008252089400000000000000000000000000000000000000000080a01c1d344ce7fb39e36bcdf0b1b52c5f5b8a81cb4f03df64e7b93ac3a14b9d00da80a06321758d5351b35175d888d2ff3d21d5a4dc00ae473843e8e4259e7f2765a59"] },
+            { method: "eth_sendTransaction", params: [{ from: "0x0000000000000000000000000000000000000000", to: "0x0000000000000000000000000000000000000000", value: "0x1" }] }
+        ];
+
+        async function testRpc() {
+            const rpcEndpoint = document.getElementById("rpcEndpoint").value;
+            const table = document.getElementById("resultsTable");
+            const tbody = table.querySelector("tbody");
+            tbody.innerHTML = "";
+
+            if (!rpcEndpoint) {
+                alert("Please provide an RPC endpoint.");
+                return;
+            }
+
+            table.style.display = "none"; // Hide table initially
+
+            for (const { method, params } of methodsToTest) {
+                const row = document.createElement("tr");
+                const methodCell = document.createElement("td");
+                const enabledCell = document.createElement("td");
+                const responseCell = document.createElement("td");
+
+                methodCell.textContent = method;
+
+                try {
+                    const result = await rpcRequest(rpcEndpoint, method, params);
+                    enabledCell.textContent = "Yes";
+                    enabledCell.style.color = "green";
+                    responseCell.textContent = JSON.stringify(result, null, 2);
+                } catch (error) {
+                    enabledCell.textContent = "No";
+                    enabledCell.style.color = "red";
+                    responseCell.textContent = error.message || "Error";
+                }
+
+                row.appendChild(methodCell);
+                row.appendChild(enabledCell);
+                row.appendChild(responseCell);
+                tbody.appendChild(row);
+            }
+
+            table.style.display = "table"; // Show table after populating
+        }
+
+        async function rpcRequest(rpcEndpoint, method, params = []) {
+            const response = await fetch(rpcEndpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+            });
+            const json = await response.json();
+            if (json.error) {
+                throw new Error(`RPC Error: ${json.error.message}`);
+            }
+            return json.result;
+        }
+    </script>
+</body>
+</html>
